@@ -9,8 +9,15 @@ services:
     depends_on:
       jaeger:
         condition: service_healthy
+
+  app-healthcheck:
+    image: curlimages/curl:latest
+    command: ["sleep", "infinity"]
+    depends_on:
+      app:
+        condition: service_started
     healthcheck:
-      test: ["CMD", "curl", "-f", "http://localhost:3000/"]
+      test: ["CMD", "curl", "-f", "http://app:3000/"]
       interval: 5s
       timeout: 5s
       retries: 5

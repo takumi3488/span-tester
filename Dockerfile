@@ -1,37 +1,33 @@
-# Build stage
-FROM oven/bun:1-alpine AS builder
+FROM oven/bun AS build
+
 WORKDIR /app
 
-# Copy package files
-COPY package.json bun.lockb* ./
+# Cache packages installation
+COPY package.json package.json
+COPY bun.lock bun.lock
 
-# Install dependencies
-RUN bun install --frozen-lockfile --production
+RUN bun install
 
-# Copy source code
-COPY src ./src
-COPY biome.json ./
+COPY ./src ./src
 
-# Runtime stage
-FROM oven/bun:1-alpine
+ENV NODE_ENV=production
+
+RUN bun build \
+    --compile \
+    --minify-whitespace \
+    --minify-syntax \
+    --target bun \
+    --outfile server \
+    ./src/index.ts
+
+FROM gcr.io/distroless/base
+
 WORKDIR /app
 
-# Install curl for healthcheck
-RUN apk add --no-cache curl
+COPY --from=build /app/server server
 
-# Copy application from builder
-COPY --from=builder /app/node_modules ./node_modules
-COPY --from=builder /app/package.json ./package.json
-COPY --from=builder /app/src ./src
+ENV NODE_ENV=production
 
-# Create non-root user
-RUN addgroup -g 1001 -S bunuser && \
-    adduser -u 1001 -S bunuser -G bunuser
+CMD ["./server"]
 
-USER bunuser
-
-# Expose port
 EXPOSE 3000
-
-# Start the application
-CMD ["bun", "run", "src/index.ts"]
