@@ -1,0 +1,89 @@
+version: '3'
+
+tasks:
+  default:
+    desc: Run the test suite
+    cmds:
+      - task: test
+
+  up:
+    desc: Start the application and Jaeger
+    cmds:
+      - docker compose up -d --build --wait
+
+  down:
+    desc: Stop and remove containers
+    cmds:
+      - docker compose down
+
+  logs:
+    desc: View logs from all services
+    cmds:
+      - docker compose logs -f
+
+  test:
+    desc: Run the complete test suite
+    cmds:
+      - task: up
+      - task: send-spans
+      - task: verify-spans
+      - task: down
+    vars:
+      CONTINUE_ON_ERROR: true
+
+  send-spans:
+    desc: Send test spans to the application
+    cmds:
+      - |
+        echo "Sending test spans..."
+        
+        # Send debug level span
+        curl -s "http://localhost:3000/debug?body=Debug%20message%20for%20testing" || true
+        sleep 1
+        
+        # Send info level span
+        curl -s "http://localhost:3000/info?body=Information%20about%20the%20system" || true
+        sleep 1
+        
+        # Send warn level span with nested spans
+        curl -s "http://localhost:3000/warn?body=Warning%20detected%20in%20system" || true
+        sleep 1
+        
+        # Send error level span with exception
+        curl -s "http://localhost:3000/error?body=Critical%20error%20occurred" || true
+        sleep 2
+        
+        echo "Test spans sent!"
+
+  verify-spans:
+    desc: Verify spans were received by Jaeger
+    cmds:
+      - |
+        echo "Waiting for spans to be processed..."
+        sleep 5
+        
+        echo "Querying Jaeger for traces..."
+        
+        # Query Jaeger API for traces
+        TRACES=$(curl -s "http://localhost:16686/api/traces?service=span-tester&limit=10" | grep -o '"traceID"' | wc -l)
+        
+        if [ "$TRACES" -gt 0 ]; then
+          echo "✅ Success! Found $TRACES traces in Jaeger"
+          
+          # Get service operations
+          echo ""
+          echo "Service operations found:"
+          curl -s "http://localhost:16686/api/services/span-tester/operations" | grep -o '"name":"[^"]*"' | cut -d'"' -f4 | head -10
+          
+          # Get trace details
+          echo ""
+          echo "Sample trace IDs:"
+          curl -s "http://localhost:16686/api/traces?service=span-tester&limit=5" | grep -o '"traceID":"[^"]*"' | cut -d'"' -f4 | head -5
+          
+          echo ""
+          echo "Test completed successfully! Visit http://localhost:16686 to view traces in Jaeger UI"
+        else
+          echo "⚠️ No traces found in Jaeger. This might be a timing issue."
+          echo "Try running 'task send-spans' again or check logs with 'task logs'"
+          exit 1
+        fi
