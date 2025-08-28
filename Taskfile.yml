@@ -24,6 +24,7 @@ tasks:
   test:
     desc: Run the complete test suite
     cmds:
+      - docker compose down
       - task: up
       - task: send-spans
       - task: verify-spans
@@ -64,7 +65,8 @@ tasks:
         echo "Querying Jaeger for traces..."
         
         # Query Jaeger API for traces
-        TRACES=$(curl -s "http://localhost:16686/api/traces?service=span-tester&limit=10" | grep -o '"traceID"' | wc -l)
+        TRACES_JSON=$(curl -s "http://localhost:16686/api/traces?service=span-tester&limit=20")
+        TRACES=$(echo "$TRACES_JSON" | grep -o '"traceID"' | wc -l)
         
         if [ "$TRACES" -gt 0 ]; then
           echo "✅ Success! Found $TRACES traces in Jaeger"
@@ -74,13 +76,107 @@ tasks:
           echo "Service operations found:"
           curl -s "http://localhost:16686/api/services/span-tester/operations" | grep -o '"name":"[^"]*"' | cut -d'"' -f4 | head -10
           
-          # Get trace details
+          # Get unique trace IDs
           echo ""
-          echo "Sample trace IDs:"
-          curl -s "http://localhost:16686/api/traces?service=span-tester&limit=5" | grep -o '"traceID":"[^"]*"' | cut -d'"' -f4 | head -5
+          echo "Getting trace details and verifying SpanEvents..."
+          TRACE_IDS=$(echo "$TRACES_JSON" | grep -o '"traceID":"[^"]*"' | cut -d'"' -f4 | sort -u | head -10)
+          
+          # Track which messages we've found
+          FOUND_DEBUG=0
+          FOUND_INFO=0
+          FOUND_WARN=0
+          FOUND_ERROR=0
+          
+          # Collect all trace details first
+          ALL_TRACES=""
+          for TRACE_ID in $TRACE_IDS; do
+            echo "Checking trace: $TRACE_ID"
+            TRACE_DETAIL=$(curl -s "http://localhost:16686/api/traces/$TRACE_ID")
+            ALL_TRACES="$ALL_TRACES$TRACE_DETAIL"
+          done
           
           echo ""
-          echo "Test completed successfully! Visit http://localhost:16686 to view traces in Jaeger UI"
+          echo "Verifying SpanEvents..."
+          
+          # Check for each message type
+          if echo "$ALL_TRACES" | grep -q "Debug message for testing"; then
+            echo "  ✅ Found DEBUG level SpanEvent: 'Debug message for testing'"
+            FOUND_DEBUG=1
+            
+            # Verify attributes
+            if echo "$ALL_TRACES" | grep -B5 -A5 "Debug message for testing" | grep -q '"level":"debug"'; then
+              echo "     - Level attribute confirmed: debug"
+            fi
+          fi
+          
+          if echo "$ALL_TRACES" | grep -q "Information about the system"; then
+            echo "  ✅ Found INFO level SpanEvent: 'Information about the system'"
+            FOUND_INFO=1
+            
+            # Verify attributes
+            if echo "$ALL_TRACES" | grep -B5 -A5 "Information about the system" | grep -q '"level":"info"'; then
+              echo "     - Level attribute confirmed: info"
+            fi
+          fi
+          
+          if echo "$ALL_TRACES" | grep -q "Warning detected in system"; then
+            echo "  ✅ Found WARN level SpanEvent: 'Warning detected in system'"
+            FOUND_WARN=1
+            
+            # Verify attributes
+            if echo "$ALL_TRACES" | grep -B5 -A5 "Warning detected in system" | grep -q '"level":"warn"'; then
+              echo "     - Level attribute confirmed: warn"
+            fi
+          fi
+          
+          if echo "$ALL_TRACES" | grep -q "Critical error occurred"; then
+            echo "  ✅ Found ERROR level SpanEvent: 'Critical error occurred'"
+            FOUND_ERROR=1
+            
+            # Verify attributes
+            if echo "$ALL_TRACES" | grep -B5 -A5 "Critical error occurred" | grep -q '"level":"error"'; then
+              echo "     - Level attribute confirmed: error"
+            fi
+            
+            # Check for exception
+            if echo "$ALL_TRACES" | grep -q '"exception.message":"Critical error occurred"'; then
+              echo "     - Exception recorded with message"
+            fi
+            
+            # Check for error flag
+            if echo "$ALL_TRACES" | grep -q '"error":true'; then
+              echo "     - Error flag set to true"
+            fi
+          fi
+          
+          TOTAL_FOUND=$((FOUND_DEBUG + FOUND_INFO + FOUND_WARN + FOUND_ERROR))
+          
+          echo ""
+          echo "================================"
+          echo "Test Results Summary:"
+          echo "  - Total traces analyzed: $TRACES"
+          echo "  - DEBUG message found: $([ $FOUND_DEBUG -eq 1 ] && echo '✅' || echo '❌')"
+          echo "  - INFO message found:  $([ $FOUND_INFO -eq 1 ] && echo '✅' || echo '❌')"
+          echo "  - WARN message found:  $([ $FOUND_WARN -eq 1 ] && echo '✅' || echo '❌')"
+          echo "  - ERROR message found: $([ $FOUND_ERROR -eq 1 ] && echo '✅' || echo '❌')"
+          echo ""
+          
+          if [ "$TOTAL_FOUND" -eq 4 ]; then
+            echo "✅ SUCCESS! All 4 SpanEvent message types verified!"
+            echo ""
+            echo "All SpanEvents with their messages have been confirmed in Jaeger."
+            echo "Visit http://localhost:16686 to view the traces in Jaeger UI."
+          else
+            echo "⚠️ FAILED: Only $TOTAL_FOUND out of 4 message types were found."
+            echo ""
+            [ $FOUND_DEBUG -eq 0 ] && echo "Missing: DEBUG message"
+            [ $FOUND_INFO -eq 0 ] && echo "Missing: INFO message"
+            [ $FOUND_WARN -eq 0 ] && echo "Missing: WARN message"
+            [ $FOUND_ERROR -eq 0 ] && echo "Missing: ERROR message"
+            echo ""
+            echo "This might be a timing issue. Try running 'task send-spans' again."
+            exit 1
+          fi
         else
           echo "⚠️ No traces found in Jaeger. This might be a timing issue."
           echo "Try running 'task send-spans' again or check logs with 'task logs'"
