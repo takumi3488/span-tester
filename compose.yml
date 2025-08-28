@@ -11,10 +11,10 @@ services:
         condition: service_healthy
     healthcheck:
       test: ["CMD", "curl", "-f", "http://localhost:3000/"]
-      interval: 10s
+      interval: 5s
       timeout: 5s
       retries: 5
-      start_period: 20s
+      start_period: 5s
 
   jaeger:
     image: jaegertracing/jaeger:latest
@@ -24,7 +24,7 @@ services:
       - COLLECTOR_OTLP_ENABLED=true
     healthcheck:
       test: ["CMD", "wget", "--spider", "-q", "http://localhost:13133/status"]
-      interval: 10s
+      interval: 5s
       timeout: 5s
       retries: 5
-      start_period: 10s
+      start_period: 5s
