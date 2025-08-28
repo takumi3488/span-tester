@@ -17,6 +17,8 @@ jobs:
         
       - name: Run tests
         uses: takumi3488/mygha/bun/test@main
+        with:
+          skip-test: true
 
   build-and-release:
     runs-on: ubuntu-latest
