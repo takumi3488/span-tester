@@ -6,11 +6,7 @@ services:
     ports:
       - "3000:3000"
     environment:
-      - OTEL_SERVICE_NAME=span-tester
       - OTEL_EXPORTER_OTLP_ENDPOINT=http://jaeger:4317
-      - OTEL_EXPORTER_OTLP_PROTOCOL=grpc
-      - OTEL_TRACES_EXPORTER=otlp
-      - NODE_ENV=production
       - OTEL_LOG_LEVEL=DEBUG
     depends_on:
       jaeger:
