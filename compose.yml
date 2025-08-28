@@ -11,6 +11,7 @@ services:
       - OTEL_EXPORTER_OTLP_PROTOCOL=grpc
       - OTEL_TRACES_EXPORTER=otlp
       - NODE_ENV=production
+      - OTEL_LOG_LEVEL=DEBUG
     depends_on:
       jaeger:
         condition: service_healthy

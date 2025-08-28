@@ -1,12 +1,13 @@
 import { opentelemetry } from "@elysiajs/opentelemetry";
 import { SpanStatusCode, trace } from "@opentelemetry/api";
-import { OTLPTraceExporter } from "@opentelemetry/exporter-trace-otlp-proto";
+import { OTLPTraceExporter } from "@opentelemetry/exporter-trace-otlp-grpc";
 import { BatchSpanProcessor } from "@opentelemetry/sdk-trace-node";
 import { Elysia, t } from "elysia";
 
 new Elysia()
 	.use(
 		opentelemetry({
+			serviceName: process.env.OTEL_SERVICE_NAME || "span-tester",
 			spanProcessors: [new BatchSpanProcessor(new OTLPTraceExporter())],
 		}),
 	)

@@ -27,7 +27,6 @@ tasks:
       - task: up
       - task: send-spans
       - task: verify-spans
-      - task: down
     vars:
       CONTINUE_ON_ERROR: true
 
