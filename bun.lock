@@ -427,7 +427,7 @@
 
     "supports-preserve-symlinks-flag": ["supports-preserve-symlinks-flag@1.0.0", "", {}, "sha512-ot0WnXS9fgdkgIcePe6RHNk1WA8+muPa6cSjeR3V8K27q9BB1rTE3R1p7Hv0z1ZyAc8s6Vvv8DIyWf681MAt0w=="],
 
-    "systeminformation": ["systeminformation@5.31.16", "", { "os": "!aix", "bin": { "systeminformation": "lib/cli.js" } }, "sha512-37NsFaeaqwYxanLgdJAGWj8OXIRgvSBsDXGhlC0uUoHyl9nf4HrNsZjqtQ9Gc99bj9FQpffzYccPVuQ6gpjfqg=="],
+    "systeminformation": ["systeminformation@5.32.0", "", { "os": "!aix", "bin": { "systeminformation": "lib/cli.js" } }, "sha512-7gfXs43T91miPxxTTtrYitotR/8MPsI2gy3XgUMs6kmOE/JCVqZp6nJpx4XkSutoSqDh6+Y2ovvb2A3RQCR+8w=="],
 
     "token-types": ["token-types@6.1.2", "", { "dependencies": { "@borewit/text-codec": "^0.2.1", "@tokenizer/token": "^0.3.0", "ieee754": "^1.2.1" } }, "sha512-dRXchy+C0IgK8WPC6xvCHFRIWYUbqqdEIKPaKo/AcTUNzwLTK6AH7RjdLWsEZcAN/TBdtfUw3PYEgPr5VPr6ww=="],
 
