@@ -9,10 +9,10 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - name: Checkout repository
-        uses: actions/checkout@v7
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
         
       - name: Run tests
-        uses: takumi3488/mygha/bun/test@main
+        uses: takumi3488/mygha/bun/test@6c9c9fe8d56c10dea277e8977b64385703fa7729 # main
         with:
           skip-test: true
 
